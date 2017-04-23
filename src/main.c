@@ -1,38 +1,59 @@
-/* Michael Pratt <michael@pratt.im>
- * Vastly simplified the code from https://github.com/jeremyherbert/stm32-templates/ */
+#include "stm32f4xx.h"
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_gpio.h"
 
-#include "system.h"
-
-#define RCC_AHB1ENR *(volatile uint32_t *) (RCC_BASE + 0x30)    /* AHB1 Enable Register */
-
-#define GPIOD_BASE  (AHB1PERIPH_BASE + 0x0C00)                  /* GPIO Port D base address */
-#define GPIOD_MODER *(volatile uint32_t *) (GPIOD_BASE + 0x00)  /* Port D mode register */
-#define LED_ODR     *(volatile uint32_t *) (GPIOD_BASE + 0x14)  /* LED Output Data Register */
-
-void Delay(volatile uint32_t nCount);
+static void initialize_leds(void);
+static void initialize_button(void);
 
 int main(void) {
+	
+	initialize_leds();
+	initialize_button();
 
-    /* Enable Port D Clock
-    * See docs/stm32f4_ref.pdf page 110 for description of RCC_AHB1ENR */
-    RCC_AHB1ENR |= (1 << 3);
+  while (1) {
+		if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)) {
+			GPIO_SetBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14);
+		} else {
+			GPIO_ResetBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14);
+		}
+  }
 
-    /* Set pins to output
-    * See docs/stm32f4_ref.pdf page 148 for description of GPIOD_MODER */
-    GPIOD_MODER |= (1 << (12 * 2)) | (1 << (13 * 2)) | (1 << (14 * 2)) | (1 << (15 * 2));
-
-    while (1) {
-        /* Toggle LEDs */
-        LED_ODR ^= (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15);
-
-        Delay(5000000);
-    }
+	return 0;
 }
 
-void Delay(volatile uint32_t nCount) {
-  float one;
-  while(nCount--)
-  {
-      one = (float) nCount*3.141592f;
-  }
+static void initialize_leds(void) {
+	// Structure to hold GPIO settings
+	GPIO_InitTypeDef GPIO_InitDef;
+
+	// Enable clock on GPIOD port
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
+	// Settings
+	GPIO_InitDef.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+	GPIO_InitDef.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitDef.GPIO_OType = GPIO_OType_PP; // Push pull
+	GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitDef.GPIO_Speed = GPIO_Speed_100MHz;
+
+	// Initialize Pin
+	GPIO_Init(GPIOD, &GPIO_InitDef);
+}
+
+static void initialize_button(void) {
+	// Structure to hold GPIO settings
+	GPIO_InitTypeDef GPIO_InitDef;
+
+	// Enable clock on GPIOA port
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+
+	// Settings
+	GPIO_InitDef.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitDef.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitDef.GPIO_OType = GPIO_OType_PP; // Push pull
+	GPIO_InitDef.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_InitDef.GPIO_Speed = GPIO_Speed_100MHz;
+
+	// Initialize Pin
+	GPIO_Init(GPIOA, &GPIO_InitDef);
+
 }
